@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export const dynamic = "force-dynamic"; // don't cache this route
+export const dynamic = "force-dynamic"; // avoid any caching
 
-// TEMP: GET /api/enquiry?diagnostic=1 => check env visibility
+// GET /api/enquiry?diagnostic=1 — quick env check
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const diag = url.searchParams.get("diagnostic");
@@ -23,6 +23,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ ok: true, message: "enquiry endpoint ready" });
 }
 
+// POST /api/enquiry — insert enquiry (bypasses RLS via service-role)
 export async function POST(req: Request) {
   try {
     const { name, email, message } = await req.json();
@@ -34,7 +35,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // IMPORTANT: admin client bypasses RLS
     const { data, error } = await supabaseAdmin
       .from("enquiries")
       .insert([{ name, email, message }])
@@ -63,4 +63,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
