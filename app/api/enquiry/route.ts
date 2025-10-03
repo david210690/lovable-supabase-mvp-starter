@@ -1,65 +1,104 @@
+// app/api/enquiry/route.ts
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { Resend } from "resend";
 
-export const dynamic = "force-dynamic"; // avoid any caching
+// --- CORS (so you can post from anywhere if you want) ------------------------
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
-// GET /api/enquiry?diagnostic=1 — quick env check
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const diag = url.searchParams.get("diagnostic");
-
-  if (diag) {
-    return NextResponse.json({
-      ok: true,
-      usingAdmin: Boolean(process.env.SUPABASE_SERVICE_ROLE),
-      hasUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-      envPreview: {
-        SUPABASE_SERVICE_ROLE: process.env.SUPABASE_SERVICE_ROLE ? "present" : "missing",
-        NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? "present" : "missing",
-      },
-    });
-  }
-
-  return NextResponse.json({ ok: true, message: "enquiry endpoint ready" });
+export function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-// POST /api/enquiry — insert enquiry (bypasses RLS via service-role)
+// --- Optional email notification --------------------------------------------
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+
+// Simple email check (keep lightweight/no extra deps)
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+type EnquiryPayload = {
+  name: string;
+  email: string;
+  message: string;
+};
+
+// --- POST /api/enquiry -------------------------------------------------------
 export async function POST(req: Request) {
   try {
-    const { name, email, message } = await req.json();
+    const body = (await req.json()) as Partial<EnquiryPayload>;
+    const name = (body.name || "").trim();
+    const email = (body.email || "").trim();
+    const message = (body.message || "").trim();
 
-    if (!name || !email) {
+    // Basic validation
+    if (!name || !email || !message) {
       return NextResponse.json(
-        { ok: false, error: "name and email are required" },
-        { status: 400 }
+        { ok: false, error: "Missing fields: name, email, message are required" },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid email address" },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    if (message.length > 2000) {
+      return NextResponse.json(
+        { ok: false, error: "Message is too long" },
+        { status: 400, headers: corsHeaders }
       );
     }
 
+    // Insert into DB using the server-only (service role) client
     const { data, error } = await supabaseAdmin
       .from("enquiries")
       .insert([{ name, email, message }])
-      .select();
+      .select()
+      .single();
 
     if (error) {
       return NextResponse.json(
-        {
-          ok: false,
-          usingAdmin: Boolean(process.env.SUPABASE_SERVICE_ROLE),
-          error: error.message,
-        },
-        { status: 400 }
+        { ok: false, error: error.message },
+        { status: 400, headers: corsHeaders }
       );
     }
 
-    return NextResponse.json({ ok: true, data }, { status: 201 });
+    // Optional: notify you via email (safe to ignore errors here)
+    if (resend) {
+      try {
+        await resend.emails.send({
+          // Make sure this sender is verified in Resend; or use their test sender while developing
+          from: "Kumar <notifications@your-domain.com>",
+          to: ["k.davidimba@gmail.com"],
+          subject: "New enquiry received",
+          text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
+        });
+
+        // Optional auto-reply to the sender:
+        // await resend.emails.send({
+        //   from: "Kumar <hello@your-domain.com>",
+        //   to: [email],
+        //   subject: "Thanks — we got your enquiry",
+        //   text: `Hi ${name},\n\nThanks for reaching out. We'll get back to you shortly.\n\n— Kumar`,
+        // });
+      } catch (e) {
+        console.error("Resend email error:", e);
+      }
+    }
+
+    return NextResponse.json({ ok: true, data }, { headers: corsHeaders });
   } catch (err: any) {
     return NextResponse.json(
-      {
-        ok: false,
-        usingAdmin: Boolean(process.env.SUPABASE_SERVICE_ROLE),
-        error: err.message,
-      },
-      { status: 500 }
+      { ok: false, error: err?.message ?? "Server error" },
+      { status: 500, headers: corsHeaders }
     );
   }
 }
