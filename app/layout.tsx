@@ -10,7 +10,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* keep it simple for now; you can add Tailwind later */}
       <body style={{ fontFamily: "system-ui", margin: 0 }}>{children}</body>
     </html>
   );
