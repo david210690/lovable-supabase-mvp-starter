@@ -9,7 +9,7 @@ export default function Home() {
   // simple env check to show Supabase is wired
   const connected = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
