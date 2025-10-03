@@ -1,30 +1,18 @@
-import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-// POST /api/enquiry
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { name, email, message } = body;
+    const { name, email, message } = await req.json();
 
-    if (!name || !email) {
-      return NextResponse.json(
-        { ok: false, error: "name and email are required" },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("enquiries")
-      .insert([{ name, email, message }])
-      .select();
+      .insert([{ name, email, message }]);
 
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    }
+    if (error) throw error;
 
-    return NextResponse.json({ ok: true, data }, { status: 201 });
+    return Response.json({ ok: true, data });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    return Response.json({ ok: false, error: err.message }, { status: 400 });
   }
 }
+
