@@ -4,12 +4,12 @@
 import { useState } from 'react';
 
 export default function Home() {
-  const [status, setStatus] = useState<string>('');
+  const [status, setStatus] = useState('');
 
-  // simple env check to show Supabase is wired
+  // Simple env check to show Supabase is wired
   const connected = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -36,7 +36,7 @@ export default function Home() {
   }
 
   return (
-    <main className="p-6">
+    <main className="p-6" style={{ padding: 24 }}>
       <h1>Lovable + Supabase MVP Starter ✅</h1>
 
       <p>Deployed on Vercel. Env configured: {connected ? 'Yes' : 'No'}</p>
@@ -49,8 +49,10 @@ export default function Home() {
       </div>
 
       <p className="mt-4">
-        Try the <code>/api/health</code> endpoint:{' '}
-        <a href="/api/health" style={{ color: '#0070f3' }}>/api/health</a>
+        Try the <code>/api/health</code> endpoint{' '}
+        <a href="/api/health" style={{ color: '#0070f3' }}>
+          /api/health
+        </a>
       </p>
 
       <form onSubmit={submit} style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
