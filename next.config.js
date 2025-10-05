@@ -1,21 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,   // keep strict mode enabled for dev
-  swcMinify: true,         // ensures faster builds with SWC
+  reactStrictMode: true,
+  swcMinify: true,
 
-  eslint: {
-    // Don’t fail the build on ESLint errors during CI
-    ignoreDuringBuilds: true,
-  },
+  // Don’t fail CI on ESLint or TypeScript issues
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
 
-  typescript: {
-    // Don’t fail the build on TS errors during CI
-    ignoreBuildErrors: true,
-  },
-
+  // remove or adjust if you don't need remote images
   images: {
-    // allow loading images from remote domains if needed
-    domains: ['localhost', 'your-domain.com'],
+    domains: ['localhost'],
   },
 };
 
