@@ -21,17 +21,19 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'   # or '20' if you prefer; keep consistent with your project
+          node-version: '18'   # pick 18 or 20, just be consistent
+          # IMPORTANT: do NOT set "cache" here
 
-      # No cache here because there is no lockfile yet
       - name: Install dependencies
+        # npm ci requires a lockfile; use install instead
         run: npm install --no-audit --no-fund
 
       - name: Build (Next.js)
         run: npm run build
 
-      # Optional: only if you want these to run when present. They won't fail the workflow.
+      # Optional – won’t fail the workflow if scripts are missing
       - name: Typecheck (optional)
         run: npm run typecheck || echo "typecheck skipped"
+
       - name: Lint (optional)
         run: npm run lint || echo "lint skipped"
