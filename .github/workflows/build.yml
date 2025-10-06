@@ -2,57 +2,61 @@ name: build
 
 on:
   push:
-    branches: [ main ]
+    branches: ["**"]
   pull_request:
-    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Use Node 18 and DO NOT enable npm cache (it needs a lock file).
-      - name: Setup Node
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
-          # cache: 'npm'   # ← do NOT enable this unless you commit package-lock.json
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Print Node & npm versions
         run: |
           node -v
           npm -v
 
-      # Install deps. If there is a lock file, npm ci will be used automatically
-      # by this little script, otherwise npm i.
-      - name: Install dependencies
+      - name: Lint (if present)
+        run: npm run lint --if-present
+
+      - name: Typecheck (if present)
+        run: npm run typecheck --if-present
+
+      - name: Build
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci --no-audit --no-fund
+          if npm run -s vercel-build >/dev/null 2>&1; then
+            npm run vercel-build
           else
-            npm install --no-audit --no-fund --legacy-peer-deps
+            npm run build
           fi
 
-      # Optional: quick sanity check that Next is present
-      - name: List installed top-level packages (debug)
-        run: npm ls --depth=0 || true
+      # Optional: upload build output for debugging / artifacts
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next
+            .vercel/output
+          if-no-files-found: ignore
 
-      # Build with env set. These two envs are enough for your /api/enquiry route.
-      - name: Build (Next.js)
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
-          # telemetry off (optional)
-          NEXT_TELEMETRY_DISABLED: 1
-        run: |
-          npm run build
-
-      # (Optional) run Next health check – skip if you don’t want it
-      # - name: Typecheck
-      #   run: npm run typecheck --if-present
-      #
-      # - name: Lint
-      #   run: npm run lint --if-present
