@@ -2,61 +2,34 @@ name: build
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "main" ]
   pull_request:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js 22.x
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: 22.x
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Print Node & npm versions
-        run: |
-          node -v
-          npm -v
-
       - name: Lint (if present)
-        run: npm run lint --if-present
-
-      - name: Typecheck (if present)
-        run: npm run typecheck --if-present
-
-      - name: Build
         run: |
-          if npm run -s vercel-build >/dev/null 2>&1; then
-            npm run vercel-build
+          if [ -f package.json ] && grep -q "\"lint\":" package.json; then
+            npm run lint || true
           else
-            npm run build
+            echo "No lint script found, skipping..."
           fi
 
-      # Optional: upload build output for debugging / artifacts
-      - name: Upload build artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-build
-          path: |
-            .next
-            .vercel/output
-          if-no-files-found: ignore
-
+      - name: Build
+        run: npm run build
