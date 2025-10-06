@@ -6,25 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.45.0",
-    "resend": "3.2.0",
-    "next": "14.2.3",
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@types/node": "20.11.19",
-    "@types/react": "18.2.79",
-    "@types/react-dom": "18.2.25",
-    "eslint": "8.57.0",
-    "eslint-config-next": "14.2.3",
-    "typescript": "5.4.5"
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.5",
+    "typescript": "^5.4.0"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
