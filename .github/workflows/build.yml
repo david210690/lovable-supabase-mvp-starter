@@ -2,34 +2,45 @@ name: build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node.js 22
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
-          cache: "npm"
+          node-version: '22.x'
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint (if present)
+      - name: Install dependencies (lockfile if present)
         run: |
-          if [ -f package.json ] && grep -q "\"lint\":" package.json; then
-            npm run lint || true
+          if [ -f package-lock.json ]; then
+            npm ci
           else
-            echo "No lint script found, skipping..."
+            npm install
           fi
+
+      - name: Print Node & npm versions
+        run: |
+          node -v
+          npm -v
+          npx next --version || true
+
+      # Runs lint if an ESLint config exists, but does NOT fail the job
+      - name: Lint (non-blocking)
+        if: ${{ hashFiles('.eslintrc*') != '' || hashFiles('**/.eslintrc*') != '' }}
+        run: npm run lint || echo "Lint failed, continuing (non-blocking)"
+        continue-on-error: true
 
       - name: Build
         run: npm run build
