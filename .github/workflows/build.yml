@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# cancel older runs of the same workflow/branch
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -14,11 +13,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Use Node.js 22.x
@@ -27,13 +24,12 @@ jobs:
           node-version: 22.x
           cache: npm
 
-      - name: Print Node & npm versions
+      - name: Show Node & npm versions
         run: |
           node -v
           npm -v
 
       - name: Install dependencies
-        # prefer reproducible installs; fall back to npm install if no lockfile
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -41,13 +37,13 @@ jobs:
             npm install
           fi
 
-      - name: Lint (non-blocking)
-        run: |
-          npm run lint || echo "Lint failed (non-blocking) — continuing"
+      # Lint is optional — won’t fail CI
+      - name: Run lint (optional)
+        run: npm run lint || echo "Lint failed but continuing"
 
-      - name: Typecheck (non-blocking)
-        run: |
-          npm run typecheck || echo "Typecheck skipped/failed (non-blocking) — continuing"
+      # Typecheck is optional — won’t fail CI
+      - name: Run typecheck (optional)
+        run: npm run typecheck || echo "Typecheck failed but continuing"
 
-      - name: Build
+      - name: Build project
         run: npm run build
