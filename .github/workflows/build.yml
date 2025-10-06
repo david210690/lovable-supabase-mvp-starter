@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# cancel older runs of the same workflow/branch
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,16 +18,22 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'npm'
+          node-version: 22.x
+          cache: npm
 
-      - name: Install dependencies (lockfile if present)
+      - name: Print Node & npm versions
+        run: |
+          node -v
+          npm -v
+
+      - name: Install dependencies
+        # prefer reproducible installs; fall back to npm install if no lockfile
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -30,17 +41,13 @@ jobs:
             npm install
           fi
 
-      - name: Print Node & npm versions
-        run: |
-          node -v
-          npm -v
-          npx next --version || true
-
-      # Runs lint if an ESLint config exists, but does NOT fail the job
       - name: Lint (non-blocking)
-        if: ${{ hashFiles('.eslintrc*') != '' || hashFiles('**/.eslintrc*') != '' }}
-        run: npm run lint || echo "Lint failed, continuing (non-blocking)"
-        continue-on-error: true
+        run: |
+          npm run lint || echo "Lint failed (non-blocking) — continuing"
+
+      - name: Typecheck (non-blocking)
+        run: |
+          npm run typecheck || echo "Typecheck skipped/failed (non-blocking) — continuing"
 
       - name: Build
         run: npm run build
